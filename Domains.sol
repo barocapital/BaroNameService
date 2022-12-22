@@ -21,14 +21,15 @@ contract Domains is ERC721URIStorage, AccessControl {
     mapping(string => address) public domains;
 
 
-    constructor() ERC721 ("Baro Name Service", "BNS") payable {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(APP_ROLE, msg.sender);
-        owner = payable(msg.sender);
+    constructor(address _addressAdmin) ERC721 ("Baro Name Service", "BNS") payable {
+        _grantRole(DEFAULT_ADMIN_ROLE, _addressAdmin);
+        _grantRole(APP_ROLE,_addressAdmin);
+        owner = payable(_addressAdmin);
         tld = ".baro";
-        domainPrice[0]=0.5 * 10 **17;
-        domainPrice[1]=0.3 * 10 **17;
-        domainPrice[2]=0.1 * 10 **17;
+        domainPrice[0]=0;
+        domainPrice[1]=0;
+        domainPrice[2]=0;
+        maxRange=30;
       }
      function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
@@ -40,6 +41,7 @@ contract Domains is ERC721URIStorage, AccessControl {
 
     string public tld;
     address payable public owner;
+    uint256 public maxRange;
 
     function getAllNames() public view returns (string[] memory) {
         string[] memory allNames = new string[](_tokenIds.current());
@@ -49,8 +51,8 @@ contract Domains is ERC721URIStorage, AccessControl {
         return allNames;
     }
 
-    function valid(string calldata _name) public pure returns(bool) {
-      return StringUtils.strlen(_name) >= 3 && StringUtils.strlen(_name) <= 30;
+    function valid(string memory _name) public view returns(bool) {
+      return StringUtils.strlen(_name) >= 3 && StringUtils.strlen(_name) <= maxRange;
     }
 
     function withdraw() public  onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -60,18 +62,16 @@ contract Domains is ERC721URIStorage, AccessControl {
     require(success, "Failed to withdraw Matic");
     } 
 
-    function register(string calldata _name,string calldata _tokenURI) public payable onlyRole(APP_ROLE) {
-      //require(domains[name] == address(0));
-      if (domains[_name] != address(0)) revert AlreadyRegistered();
-      if (!valid(_name)) revert InvalidName(_name);
+    function register(string calldata _name,string calldata _tokenURI) public payable  {
+     string memory name = string(abi.encodePacked(_name, tld));
+      if (domains[name] != address(0)) revert AlreadyRegistered();
+      if (!valid(name)) revert InvalidName(name);
       uint256 _price = price(_name);
 
       require(msg.value >= _price, "Not enough Matic paid");
       
       uint256 newRecordId = _tokenIds.current();
 
-      // Combine the name passed into the function  with the TLD
-      string memory name = string(abi.encodePacked(_name, ".", tld));
 
       _safeMint(msg.sender, newRecordId);
       _setTokenURI(newRecordId, _tokenURI);
@@ -97,6 +97,12 @@ contract Domains is ERC721URIStorage, AccessControl {
     {
       domains[_name] = _address;
     }
+
+     function setMaxRange(uint256 _newRange) public onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+      maxRange=_newRange;
+    }
+    
     
     function getAddress(string calldata _name) public view returns (address) {
         return domains[_name];
