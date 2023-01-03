@@ -29,7 +29,7 @@ contract Domains is ERC721URIStorage, AccessControl {
         domainPrice[0]=0;
         domainPrice[1]=0;
         domainPrice[2]=0;
-        maxRange=30;
+        maxRange=25;
       }
      function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
